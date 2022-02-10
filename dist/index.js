@@ -8,12 +8,20 @@ var TNumber = class {
     this.kind = 0 /* number */;
   }
 };
+var AddWord = class {
+  constructor() {
+    this.kind = 0 /* add */;
+  }
+};
 var NumberWord = class {
   constructor(n) {
     this.kind = 1 /* number */;
     this.number = n;
   }
 };
+function Add() {
+  return new AddWord();
+}
 function Number(n) {
   return new NumberWord(n);
 }
@@ -30,10 +38,6 @@ var memory = new WebAssembly.Memory({
 function compile(params, words) {
   var mod = new binaryen_default.Module();
   let topOfStack = params.length - 1;
-  const decr = () => {
-    topOfStack -= 1;
-    return;
-  };
   const incr = () => {
     topOfStack += 1;
     return;
@@ -42,16 +46,12 @@ function compile(params, words) {
   const expressions = words.map((word) => {
     switch (word.kind) {
       case 0 /* add */:
-        console.log("add: get", top());
         const a = mod.local.get(top(), binaryen_default.i32);
-        console.log("add: get", top() - 1);
         const b = mod.local.get(top() - 1, binaryen_default.i32);
         incr();
-        console.log("add: set", top());
         return mod.local.set(top(), mod.i32.add(a, b));
       case 1 /* number */:
         incr();
-        console.log("number: set", top());
         return mod.local.set(top(), mod.i32.const(word.number));
     }
   });
@@ -64,8 +64,11 @@ function compile(params, words) {
   mod.addMemoryImport("0", "env", "memory");
   mod.setMemory(1, 256, "memoryExport", [], true);
   mod.setFeatures(binaryen_default.Features.Atomics);
-  if (!mod.validate())
-    throw new Error("validation error");
-  return;
+  var textData = mod.emitText();
+  var wasmData = mod.emitBinary();
+  return new WebAssembly.Module(wasmData);
 }
-var wasm = compile([NumberT()], [Number(3), Number(3)]);
+var wasm = compile([NumberT()], [Number(3), Number(3), Add(), Add()]);
+var instance = new WebAssembly.Instance(wasm, { env: { memory } });
+console.log(instance.exports.run(400));
+//# sourceMappingURL=index.js.map

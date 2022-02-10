@@ -11,10 +11,6 @@ function compile(params: Core.Type[], words: Core.Word[]) {
   var mod = new binaryen.Module();
 
   let topOfStack = params.length - 1;
-  const decr = () => {
-    topOfStack -= 1;
-    return;
-  };
   const incr = () => {
     topOfStack += 1;
     return;
@@ -26,25 +22,20 @@ function compile(params: Core.Type[], words: Core.Word[]) {
     switch (word.kind) {
       case Core.Kind.add:
         // return add of last 2 values of stack
-        console.log("add: get", top())
         const a = mod.local.get(top(), binaryen.i32);
-        console.log("add: get", top() - 1)
         const b = mod.local.get(top() - 1, binaryen.i32);
 
         incr();
-        console.log("add: set", top())
-
         return mod.local.set(top(), mod.i32.add(a, b));
       case Core.Kind.number:
         // Push const value to stack
         incr();
-        console.log("number: set", top())
 
         return mod.local.set(top(), mod.i32.const(word.number));
     }
   });
 
-  console.log("return", top())
+  console.log("return", top());
 
   mod.addFunction(
     "run",
@@ -66,20 +57,23 @@ function compile(params: Core.Type[], words: Core.Word[]) {
   //mod.optimize();
 
   // // // Validate the module
-  if (!mod.validate()) throw new Error("validation error");
+  // if (!mod.validate()) throw new Error("validation error");
 
   // // Generate text format and binary
- // var textData = mod.emitText();
- // console.log(textData);
-  //var wasmData = mod.emitBinary();
+  var textData = mod.emitText();
+  // console.log(textData);
+  var wasmData = mod.emitBinary();
 
   // Example usage with the WebAssembly API
-  return// new WebAssembly.Module(wasmData);
+  return new WebAssembly.Module(wasmData);
 }
 
-const wasm = compile([Core.NumberT()], [Core.Number(3), Core.Number(3)]);
+const wasm = compile(
+  [Core.NumberT()],
+  [Core.Number(3), Core.Number(3), Core.Add(), Core.Add()]
+);
 
-// var instance = new WebAssembly.Instance(wasm, { env: { memory } });
-// console.log((instance.exports.run as CallableFunction)(400));
+var instance = new WebAssembly.Instance(wasm, { env: { memory } });
+console.log((instance.exports.run as CallableFunction)(400));
 
 //addOne(42); // => 43

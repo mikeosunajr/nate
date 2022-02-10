@@ -10,41 +10,54 @@ let memory = new WebAssembly.Memory({
 function compile(params: Core.Type[], words: Core.Word[]) {
   var mod = new binaryen.Module();
 
-  let topOfStack = params.length - 1;
-  const incr = () => {
-    topOfStack += 1;
-    return;
+  const stack: Array<number> = [];
+  const vars: Array<Core.Type> = [];
+
+  let varId = 0;
+  const use = () => {
+    if (stack.length < 1) {
+      throw new Error("popping empty stack");
+    }
+    return stack.pop() || 0;
+  };
+  const genvar = (t: Core.Type) => {
+    stack.push(varId);
+    vars.push(t);
+    varId += 1;
+    return varId - 1;
   };
 
-  const top = () => topOfStack;
+  params.forEach((p) => {
+    genvar(p);
+  });
 
   const expressions = words.map((word) => {
     switch (word.kind) {
       case Core.Kind.add:
         // return add of last 2 values of stack
-        const a = mod.local.get(top(), binaryen.i32);
-        const b = mod.local.get(top() - 1, binaryen.i32);
+        const a = mod.local.get(use(), binaryen.i32);
+        const b = mod.local.get(use(), binaryen.i32);
 
-        incr();
-        return mod.local.set(top(), mod.i32.add(a, b));
+        return mod.local.set(genvar(Core.NumberT()), mod.i32.add(a, b));
       case Core.Kind.number:
         // Push const value to stack
-        incr();
-
-        return mod.local.set(top(), mod.i32.const(word.number));
+        return mod.local.set(
+          genvar(Core.NumberT()),
+          mod.i32.const(word.number)
+        );
     }
   });
 
-  console.log("return", top());
+  const varsToBinaryenTypes = () => vars.map((v) => binaryen.i32);
 
   mod.addFunction(
     "run",
     binaryen.createType([binaryen.i32]),
     binaryen.i32,
-    [binaryen.i32, binaryen.i32],
+    varsToBinaryenTypes(),
     mod.block(null, [
       ...expressions,
-      mod.return(mod.local.get(top(), binaryen.i32)),
+      mod.return(mod.local.get(use(), binaryen.i32)),
     ])
   );
 
@@ -57,11 +70,11 @@ function compile(params: Core.Type[], words: Core.Word[]) {
   //mod.optimize();
 
   // // // Validate the module
-  // if (!mod.validate()) throw new Error("validation error");
+  if (!mod.validate()) throw new Error("validation error");
 
   // // Generate text format and binary
   var textData = mod.emitText();
-  // console.log(textData);
+  console.log(textData);
   var wasmData = mod.emitBinary();
 
   // Example usage with the WebAssembly API
@@ -70,10 +83,17 @@ function compile(params: Core.Type[], words: Core.Word[]) {
 
 const wasm = compile(
   [Core.NumberT()],
-  [Core.Number(3), Core.Number(3), Core.Add(), Core.Add()]
+  [
+    Core.Number(3),
+    Core.Number(3),
+    Core.Add(),
+    Core.Add(),
+    Core.Number(3),
+    Core.Add(),
+  ]
 );
 
 var instance = new WebAssembly.Instance(wasm, { env: { memory } });
-console.log((instance.exports.run as CallableFunction)(400));
+console.log((instance.exports.run as CallableFunction)(1));
 
 //addOne(42); // => 43

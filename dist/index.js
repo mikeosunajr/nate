@@ -37,38 +37,58 @@ var memory = new WebAssembly.Memory({
 });
 function compile(params, words) {
   var mod = new binaryen_default.Module();
-  let topOfStack = params.length - 1;
-  const incr = () => {
-    topOfStack += 1;
-    return;
+  const stack = [];
+  const vars = [];
+  let varId = 0;
+  const use = () => {
+    if (stack.length < 1) {
+      throw new Error("popping empty stack");
+    }
+    return stack.pop() || 0;
   };
-  const top = () => topOfStack;
+  const genvar = (t) => {
+    stack.push(varId);
+    vars.push(t);
+    varId += 1;
+    return varId - 1;
+  };
+  params.forEach((p) => {
+    genvar(p);
+  });
   const expressions = words.map((word) => {
     switch (word.kind) {
       case 0 /* add */:
-        const a = mod.local.get(top(), binaryen_default.i32);
-        const b = mod.local.get(top() - 1, binaryen_default.i32);
-        incr();
-        return mod.local.set(top(), mod.i32.add(a, b));
+        const a = mod.local.get(use(), binaryen_default.i32);
+        const b = mod.local.get(use(), binaryen_default.i32);
+        return mod.local.set(genvar(NumberT()), mod.i32.add(a, b));
       case 1 /* number */:
-        incr();
-        return mod.local.set(top(), mod.i32.const(word.number));
+        return mod.local.set(genvar(NumberT()), mod.i32.const(word.number));
     }
   });
-  console.log("return", top());
-  mod.addFunction("run", binaryen_default.createType([binaryen_default.i32]), binaryen_default.i32, [binaryen_default.i32, binaryen_default.i32], mod.block(null, [
+  const varsToBinaryenTypes = () => vars.map((v) => binaryen_default.i32);
+  mod.addFunction("run", binaryen_default.createType([binaryen_default.i32]), binaryen_default.i32, varsToBinaryenTypes(), mod.block(null, [
     ...expressions,
-    mod.return(mod.local.get(top(), binaryen_default.i32))
+    mod.return(mod.local.get(use(), binaryen_default.i32))
   ]));
   mod.addFunctionExport("run", "run");
   mod.addMemoryImport("0", "env", "memory");
   mod.setMemory(1, 256, "memoryExport", [], true);
   mod.setFeatures(binaryen_default.Features.Atomics);
+  if (!mod.validate())
+    throw new Error("validation error");
   var textData = mod.emitText();
+  console.log(textData);
   var wasmData = mod.emitBinary();
   return new WebAssembly.Module(wasmData);
 }
-var wasm = compile([NumberT()], [Number(3), Number(3), Add(), Add()]);
+var wasm = compile([NumberT()], [
+  Number(3),
+  Number(3),
+  Add(),
+  Add(),
+  Number(3),
+  Add()
+]);
 var instance = new WebAssembly.Instance(wasm, { env: { memory } });
-console.log(instance.exports.run(400));
+console.log(instance.exports.run(1));
 //# sourceMappingURL=index.js.map

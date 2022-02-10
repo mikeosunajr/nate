@@ -10,10 +10,9 @@
   },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --sourcemap --outdir=dist --platform=browser --format=esm",
-    "build:node": "esbuild src/index.ts --bundle --sourcemap --outdir=dist --platform=node --format=esm"
+    "build:node": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/index.node.js --platform=node --format=esm"
   },
   "devDependencies": {
-    "ts-node": "^10.5.0",
     "typescript": "^4.5.5"
   },
   "browser": {

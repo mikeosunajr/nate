@@ -1,7 +1,7 @@
 {
   "name": "nate",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/index.node.mjs",
   "license": "MIT",
   "type": "module",
   "dependencies": {
@@ -10,7 +10,7 @@
     "node-localstorage": "^2.2.1"
   },
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --sourcemap --outdir=dist --platform=browser --format=esm",
+    "build": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/index.mjs --platform=browser --format=esm",
     "build:node": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/index.node.mjs --platform=node --format=esm --banner:js='import { createRequire as topLevelCreateRequire } from \"module\";\n const require = topLevelCreateRequire(import.meta.url);'"
     
   },

@@ -6,16 +6,19 @@
   "type": "module",
   "dependencies": {
     "binaryen": "^105.0.0",
-    "esbuild": "^0.14.18"
+    "esbuild": "^0.14.18",
+    "node-localstorage": "^2.2.1"
   },
   "scripts": {
     "build": "esbuild src/index.ts --bundle --sourcemap --outdir=dist --platform=browser --format=esm",
-    "build:node": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/index.node.js --platform=node --format=esm"
+    "build:node": "esbuild src/index.ts --bundle --sourcemap --outfile=dist/index.node.mjs --platform=node --format=esm"
   },
   "devDependencies": {
+    "@types/node-localstorage": "^1.3.0",
     "typescript": "^4.5.5"
   },
   "browser": {
-    "binaryen": "./binaryen.js"
+    "binaryen": "./binaryen.js",
+    "node-localstorage": "./localstorage.js"
   }
 }

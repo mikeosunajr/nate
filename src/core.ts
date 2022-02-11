@@ -3,23 +3,35 @@ export enum Kind {
   number,
 }
 
-export enum TypeKinds {
+export enum PrimitiveType {
   number,
 }
 
-export class TNumber {
-  kind: TypeKinds.number = TypeKinds.number;
+export type Code = {
+  input: Type;
+  output: Type;
+};
+
+export type Type = PrimitiveType | Set<Type> | Array<Type>;
+
+interface BaseWord {
+  inputs: Array<Type>;
+  outputs: Array<Type>;
 }
 
-export type Type = TNumber;
-
-class AddWord {
+class AddWord implements BaseWord {
   kind: Kind.add = Kind.add;
+  inputs = [PrimitiveType.number, PrimitiveType.number];
+
+  outputs = [PrimitiveType.number];
 }
 
-class NumberWord {
+class NumberWord implements BaseWord {
   kind: Kind.number = Kind.number;
   number: number;
+  inputs = [];
+
+  outputs = [PrimitiveType.number];
   constructor(n: number) {
     this.number = n;
   }
@@ -33,8 +45,4 @@ export function Add(): AddWord {
 
 export function Number(n: number): NumberWord {
   return new NumberWord(n);
-}
-
-export function NumberT(): TNumber {
-  return new TNumber();
 }

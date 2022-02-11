@@ -1,5 +1,10 @@
 import binaryen from "binaryen";
 import * as Core from "./core";
+// import { LocalStorage } from "node-localstorage";
+
+// if (!localStorage) {
+//   localStorage = new LocalStorage("./scratch");
+// }
 
 let memory = new WebAssembly.Memory({
   initial: 10,
@@ -7,11 +12,16 @@ let memory = new WebAssembly.Memory({
   shared: true,
 });
 
-function compile(params: Core.Type[], words: Core.Word[]) {
+class Vocabulary {
+  name: Map<number, string> = new Map();
+  types: Map<string, Map<number, Core.Type>> = new Map();
+  words: Map<string, Map<number, Core.Word>> = new Map();
+}
+
+function compile(words: Core.Word[]) {
   var mod = new binaryen.Module();
 
   const stack: Array<number> = [];
-  const vars: Array<Core.Type> = [];
 
   let varId = 0;
   const use = () => {
@@ -20,15 +30,39 @@ function compile(params: Core.Type[], words: Core.Word[]) {
     }
     return stack.pop() || 0;
   };
-  const genvar = (t: Core.Type) => {
+  const genvar = () => {
     stack.push(varId);
-    vars.push(t);
     varId += 1;
     return varId - 1;
   };
 
-  params.forEach((p) => {
-    genvar(p);
+  const shape = words.reduce<{
+    inputs: Array<Core.Type>;
+    outputs: Array<Core.Type>;
+    locals: Array<Core.Type>;
+  }>(
+    (p, w) => {
+      w.inputs.forEach((i) => {
+        if (p.outputs.length > 0) {
+          p.outputs.pop();
+        } else {
+          p.inputs.push(i);
+        }
+      });
+
+      w.outputs.forEach((o) => {
+        p.outputs.push(o);
+        p.locals.push(o);
+      });
+      return p;
+    },
+    { inputs: [], outputs: [], locals: [] }
+  );
+
+  console.log(shape);
+
+  shape.inputs.forEach((p) => {
+    genvar();
   });
 
   const expressions = words.map((word) => {
@@ -38,23 +72,21 @@ function compile(params: Core.Type[], words: Core.Word[]) {
         const a = mod.local.get(use(), binaryen.i32);
         const b = mod.local.get(use(), binaryen.i32);
 
-        return mod.local.set(genvar(Core.NumberT()), mod.i32.add(a, b));
+        return mod.local.set(genvar(), mod.i32.add(a, b));
       case Core.Kind.number:
         // Push const value to stack
-        return mod.local.set(
-          genvar(Core.NumberT()),
-          mod.i32.const(word.number)
-        );
+        return mod.local.set(genvar(), mod.i32.const(word.number));
     }
   });
 
-  const varsToBinaryenTypes = () => vars.map((v) => binaryen.i32);
+  const varsToBinaryenTypes = (t: Array<Core.Type>) =>
+    t.map((v) => binaryen.i32);
 
   mod.addFunction(
     "run",
-    binaryen.createType([binaryen.i32]),
+    binaryen.createType(varsToBinaryenTypes(shape.inputs)),
     binaryen.i32,
-    varsToBinaryenTypes(),
+    varsToBinaryenTypes(shape.locals),
     mod.block(null, [
       ...expressions,
       mod.return(mod.local.get(use(), binaryen.i32)),
@@ -67,7 +99,7 @@ function compile(params: Core.Type[], words: Core.Word[]) {
   mod.setFeatures(binaryen.Features.Atomics);
 
   // Optimize the module using default passes and levels
-  //mod.optimize();
+  mod.optimize();
 
   // // // Validate the module
   if (!mod.validate()) throw new Error("validation error");
@@ -81,17 +113,14 @@ function compile(params: Core.Type[], words: Core.Word[]) {
   return new WebAssembly.Module(wasmData);
 }
 
-const wasm = compile(
-  [Core.NumberT()],
-  [
-    Core.Number(3),
-    Core.Number(3),
-    Core.Add(),
-    Core.Add(),
-    Core.Number(3),
-    Core.Add(),
-  ]
-);
+const wasm = compile([
+  Core.Number(3),
+  Core.Number(3),
+  Core.Add(),
+  Core.Add(),
+  Core.Number(3),
+  Core.Add(),
+]);
 
 var instance = new WebAssembly.Instance(wasm, { env: { memory } });
 console.log((instance.exports.run as CallableFunction)(1));

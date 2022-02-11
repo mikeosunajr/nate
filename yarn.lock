@@ -14,10 +14,10 @@
   dependencies:
     "@types/events" "*"
 
-binaryen@^105.0.0:
-  version "105.0.0"
-  resolved "https://registry.yarnpkg.com/binaryen/-/binaryen-105.0.0.tgz#78db8b517e9ad1c31229dbbcd48cdad70c6c1580"
-  integrity sha512-4d8WX9M30cHHEDkCT+Dci9CT27TVIGwxOA6R/JXjgaKTGba90TuBNmoRmoZGE6eRF8YGICFD+GODom4/eUD0Zw==
+binaryen@v105.0.0-nightly.20220211:
+  version "105.0.0-nightly.20220211"
+  resolved "https://registry.yarnpkg.com/binaryen/-/binaryen-105.0.0-nightly.20220211.tgz#e0e01545cf8e7878cbb6344138a8c9efb388c77a"
+  integrity sha512-AjTuqlClRRdQkrx6gzw0G6qQ+keVpDqF5ziovm07sQR+XXty7F9fuv0HVkaIuUJpnzSwQA6IH7wawac3EmoB0w==
 
 esbuild-android-arm64@0.14.18:
   version "0.14.18"

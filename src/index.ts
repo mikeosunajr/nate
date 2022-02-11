@@ -1,10 +1,8 @@
 import binaryen from "binaryen";
 import * as Core from "./core";
-// import { LocalStorage } from "node-localstorage";
+import { LocalStorage } from "node-localstorage";
 
-// if (!localStorage) {
-//   localStorage = new LocalStorage("./scratch");
-// }
+const localStorage = new LocalStorage("./scratch");
 
 let memory = new WebAssembly.Memory({
   initial: 10,
